@@ -1,0 +1,28 @@
+{
+  "name": "opencode-next-steps",
+  "version": "0.1.0",
+  "description": "OpenCode V2 CLI plugin for editable next-step suggestions",
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    "./tui": "./tui.tsx"
+  },
+  "files": [
+    "tui.tsx",
+    "suggestions.js",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test suggestions.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": ">=2.0.24",
+    "@opentui/core": ">=0.6.6",
+    "@opentui/solid": ">=0.6.6",
+    "solid-js": ">=1.9.0"
+  }
+}
