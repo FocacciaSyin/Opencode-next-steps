@@ -92,14 +92,21 @@ function fixture(generate = async () => ({ text: '[{"label":"測試","prompt":"�
   }
 }
 
-// 驗證完成後產生草稿，選取只修改輸入框；沒有送出訊息或執行指令的介面。
+// 驗證生成要求三個不同且獨立的面向，仍接受不足三則；選取只填入草稿，不送出或執行。
 test("completion generates editable draft without submitting", async () => {
   const f = fixture(async (input) => {
     assert.equal(input.sessionID, "selected")
     assert.match(input.prompt, /\/review/)
     assert.match(input.prompt, /@check/)
     assert.doesNotMatch(input.prompt, /\/check/)
-    assert.match(input.prompt, /一則有用就只給一則/)
+    assert.match(input.prompt, /優先提供三則不同面向的建議/)
+    assert.match(input.prompt, /目的不同、可獨立選擇/)
+    assert.match(input.prompt, /不是同一件事換句話說/)
+    assert.match(input.prompt, /不是必須依序執行的三個步驟/)
+    assert.match(input.prompt, /不要固定套用這些分類/)
+    assert.match(input.prompt, /標籤直接點出各自的面向與具體內容/)
+    assert.match(input.prompt, /不足三個有用面向時才減少則數/)
+    assert.doesNotMatch(input.prompt, /一則有用就只給一則/)
     assert.match(input.prompt, /尚未完成的工作/)
     return { text: '[{"label":"測試","prompt":"執行剛才的測試"}]' }
   })
@@ -115,6 +122,40 @@ test("completion generates editable draft without submitting", async () => {
   assert.equal(f.editor.plainText, "執行剛才的測試")
   f.runtime.stop()
   assert.equal(f.handlers.size, 0)
+})
+
+// 驗證三個不同面向的標籤與完整提問會保留，且每個選項都能獨立填入草稿。
+test("three distinct suggestions retain labels and independently fill drafts", async () => {
+  const items = [
+    { label: "推進：完成錯誤處理", prompt: "補上剛才尚未完成的錯誤處理" },
+    { label: "理解：說明失敗根因", prompt: "解釋剛才問題的根因與影響範圍" },
+    { label: "風險：檢視邊界情境", prompt: "找出目前方案尚未涵蓋的邊界情境" },
+  ]
+  const f = fixture(async () => ({ text: JSON.stringify(items) }))
+  f.emit("session.execution.succeeded")
+  await f.flush()
+  assert.deepEqual(f.offer().items, items)
+  for (const [index, item] of items.entries()) {
+    assert.equal(f.runtime.fill(index), true)
+    assert.equal(f.editor.plainText, item.prompt)
+  }
+  assert.equal(f.generated(), 1)
+  f.runtime.stop()
+})
+
+// 驗證任務結束可回傳空清單，不為湊三則而顯示建議或修改草稿。
+test("completed tasks may return no suggestions", async () => {
+  const f = fixture(async (input) => {
+    assert.match(input.prompt, /任務已結束或沒有實用的下一步就回傳 \[\]/)
+    return { text: "[]" }
+  })
+  f.emit("session.execution.succeeded")
+  await f.flush()
+  assert.equal(f.generated(), 1)
+  assert.equal(f.offer(), undefined)
+  assert.equal(f.editor.plainText, "")
+  assert.equal(f.runtime.fill(0), false)
+  f.runtime.stop()
 })
 
 // 驗證連按 Tab 依序替換三則建議並循環，不累加文字或刪掉建議。
