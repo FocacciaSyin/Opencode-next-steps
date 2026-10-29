@@ -1,23 +1,33 @@
 {
   "name": "opencode-next-steps",
   "version": "0.1.0",
-  "description": "OpenCode V2 CLI plugin for editable next-step suggestions",
+  "description": "OpenCode V2 TUI and Desktop plugin for editable next-step suggestions",
   "type": "module",
   "license": "Apache-2.0",
   "exports": {
-    "./tui": "./tui.tsx"
+    "./tui": "./tui.tsx",
+    "./gui-experimental": "./dist/gui-experimental.cjs"
   },
   "files": [
     "tui.tsx",
     "suggestions.js",
+    "dist",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
-    "test": "node --test suggestions.test.js"
+    "build": "vite build",
+    "test": "node --test *.test.js",
+    "prepack": "npm run build"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
+  },
+  "devDependencies": {
+    "@opencode/plugin": "2.2.0",
+    "solid-js": "^1.9.0",
+    "vite": "^7.0.0",
+    "vite-plugin-solid": "^2.11.0"
   },
   "peerDependencies": {
     "@opencode/plugin": ">=2.0.24",
