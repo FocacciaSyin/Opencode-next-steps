@@ -92,7 +92,7 @@ function fixture(generate = async () => ({ text: '[{"label":"測試","prompt":"�
   }
 }
 
-// 驗證生成要求三個不同且獨立的面向，仍接受不足三則；選取只填入草稿，不送出或執行。
+// 驗證生成要求貼合目標、值得現在提出且結果有別的獨立面向，仍接受不足三則；選取只填入草稿，不送出或執行。
 test("completion generates editable draft without submitting", async () => {
   const f = fixture(async (input) => {
     assert.equal(input.sessionID, "selected")
@@ -100,7 +100,9 @@ test("completion generates editable draft without submitting", async () => {
     assert.match(input.prompt, /@check/)
     assert.doesNotMatch(input.prompt, /\/check/)
     assert.match(input.prompt, /優先提供三則不同面向的建議/)
-    assert.match(input.prompt, /目的不同、可獨立選擇/)
+    assert.match(input.prompt, /貼合使用者目前的目標/)
+    assert.match(input.prompt, /值得現在提出/)
+    assert.match(input.prompt, /目的或預期結果不同、可獨立選擇/)
     assert.match(input.prompt, /不是同一件事換句話說/)
     assert.match(input.prompt, /不是必須依序執行的三個步驟/)
     assert.match(input.prompt, /不要固定套用這些分類/)
