@@ -29,6 +29,14 @@ OpenCode V2 的 TUI 與 Desktop 外掛：在目前對話完成後，優先產生
 
 ## 從此 repo 載入
 
+### 快速安裝（免 npm 發布）
+
+```sh
+opencode plugin add github:FocacciaSyin/Opencode-next-steps
+```
+
+此 repo 已將 `dist/gui-experimental.cjs` 預建並提交，且避開 `build` 腳本名稱觸發的 Git 安裝問題（`git dep preparation failed`），TUI 與 Desktop 可一次啟用。之後 `opencode plugin check` / `opencode plugin update` 可檢查更新。
+
 TUI 不需要編譯；Desktop 使用官方實驗性 GUI API，必須先建置單檔 CommonJS 入口。OpenCode 執行時提供外掛及 UI 相依套件。
 
 ### 同時啟用 Desktop 與 TUI
@@ -37,7 +45,7 @@ TUI 不需要編譯；Desktop 使用官方實驗性 GUI API，必須先建置單
 
 ```sh
 npm ci --legacy-peer-deps
-npm run build
+npm run build:gui
 ```
 
 若 npm 阻擋 esbuild 的安裝腳本，建置時因而找不到原生執行檔，可執行 `node node_modules/esbuild/install.js` 補齊，再重新建置；不需允許所有套件的安裝腳本。
@@ -50,7 +58,7 @@ npm run build
 }
 ```
 
-GUI 的 `./gui-experimental` 指向 `dist/gui-experimental.cjs`，修改 GUI 原始碼後需重新執行 `npm run build`；Desktop 會監看本機 bundle 並重新載入。只改 `cli.json` 不會啟用 Desktop 外掛。
+GUI 的 `./gui-experimental` 指向 `dist/gui-experimental.cjs`，修改 GUI 原始碼後需重新執行 `npm run build:gui` 並提交該 bundle；Desktop 會監看本機 bundle 並重新載入。只改 `cli.json` 不會啟用 Desktop 外掛。
 
 ### 只啟用 TUI
 
@@ -89,7 +97,7 @@ OpenCode 會監看設定變更；必要時在 TUI 執行 `/reload`。
 ```sh
 npm test
 npm ci --legacy-peer-deps
-npm run build
+npm run build:gui
 npm pack --dry-run
 ```
 
