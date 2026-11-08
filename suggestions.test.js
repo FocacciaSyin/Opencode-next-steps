@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { clean, draftEditor, parseSuggestions, startSuggestions, suggestionHint } from "./suggestions.js"
+import { clean, conversation, draftEditor, parseSuggestions, startSuggestions, suggestionHint } from "./suggestions.js"
 
 // 驗證模型輸出會移除不安全文字、未知指令、重複項目，並限制三則。
 test("safe suggestions keep only known commands and skills", () => {
@@ -24,6 +24,26 @@ test("safe suggestions keep only known commands and skills", () => {
   }
   assert.equal(clean("😀".repeat(700), 600), "😀".repeat(599) + "…")
   assert.equal(clean("\u3164\u200b", 48), "")
+})
+
+// 驗證預設使用固定的便宜模型，且只帶近期精簡對話。
+test("fixed cheap model receives trimmed transcript", async () => {
+  const f = fixture()
+  f.ctx.options = {}
+  f.session.message.list = () => [
+    { type: "user", content: [{ type: "text", text: "問題".repeat(800) }] },
+    { type: "assistant", finish: "stop", content: [{ type: "text", text: "答案".repeat(800) }] },
+  ]
+  f.emit("session.execution.succeeded")
+  await f.flush()
+  assert.equal(f.textGenerated(), 1)
+  assert.equal(f.generated(), 0)
+  assert.deepEqual(f.textInput().model, { providerID: "opencode-go", id: "deepseek-v4.1-flash" })
+  assert.match(f.textInput().prompt, /對話紀錄：/)
+  assert.equal(f.textInput().prompt.includes("問題".repeat(800)), false)
+  assert.equal(conversation([]), "")
+  assert.equal(conversation([{ type: "user", content: [{ type: "text", text: "x".repeat(5000) }] }]).length <= 3000, true)
+  f.runtime.stop()
 })
 
 // 驗證模型夾帶說明、markdown 圍欄或尾逗號時仍能解析出建議。
@@ -54,6 +74,8 @@ function fixture(generate = async () => ({ text: '[{"label":"測試","prompt":"�
   const handlers = new Map()
   let offer
   let generated = 0
+  let textGenerated = 0
+  let textInput
   let eventID = 0
   const editor = {
     isDestroyed: false,
@@ -78,7 +100,7 @@ function fixture(generate = async () => ({ text: '[{"label":"測試","prompt":"�
     },
   }
   const ctx = {
-    options: {},
+    options: { suggestionModel: false },
     ui: { router: { current: () => ({ type: "session", sessionID: "selected" }) }, toast: { show: () => {} } },
     renderer: { currentFocusedEditor: editor },
     keymap: { mode: { current: () => "base" }, commands: () => [] },
@@ -90,7 +112,16 @@ function fixture(generate = async () => ({ text: '[{"label":"測試","prompt":"�
         skill: { sync: async () => {}, list: () => [{ id: "check" }] },
       },
     },
-    client: { session: { generate: (...args) => { generated++; return generate(...args) } } },
+    client: {
+      generate: {
+        text: (input) => {
+          textGenerated++
+          textInput = input
+          return generate(input)
+        },
+      },
+      session: { generate: (...args) => { generated++; return generate(...args) } },
+    },
   }
   const runtime = startSuggestions(ctx, (value) => { offer = value })
   editor.onChange = () => runtime.changed()
@@ -98,6 +129,8 @@ function fixture(generate = async () => ({ text: '[{"label":"測試","prompt":"�
     ctx, editor, session, runtime, handlers,
     offer: () => offer,
     generated: () => generated,
+    textGenerated: () => textGenerated,
+    textInput: () => textInput,
     emit: (type, sessionID = "selected", id = String(++eventID)) => handlers.get(type)?.({ id, data: { sessionID } }),
     flush: () => new Promise(setImmediate),
   }

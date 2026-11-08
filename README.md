@@ -92,6 +92,17 @@ OpenCode 會監看設定變更；必要時在 TUI 執行 `/reload`。
 
 `minAnswerChars` 是觸發建議的最小回答字元數，預設 20；`suggestSkills: false` 不將可用指令與 skills 清單提供給建議模型。上述兩種設定擇一，不要同時加入同一路徑。
 
+建議文字預設使用固定便宜模型 `opencode-go/deepseek-v4.1-flash`，只附最後 4 則訊息、每則最多 1000 字、總計最多 3000 字，避免長對話成本膨脹。要改回當前 session 的模型，設定 `"suggestionModel": false`；也可指定其他模型：
+
+```json
+{
+  "package": "file:///D:/Github/opencode-next-steps",
+  "options": {
+    "suggestionModel": { "providerID": "opencode-go", "id": "deepseek-v4.1-flash" }
+  }
+}
+```
+
 ## 開發與驗證
 
 使用 Node.js 22.12 以上。邏輯測試不需先安裝套件；打包預檢會先建置 GUI，需先安裝開發相依套件：

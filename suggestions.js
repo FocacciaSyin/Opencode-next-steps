@@ -79,7 +79,7 @@ export function suggestionModel(options) {
   return options.suggestionModel ?? DEFAULT_MODEL
 }
 
-export function conversation(messages, limit = 8, width = 2000, total = 8000) {
+export function conversation(messages, limit = 4, width = 1000, total = 3000) {
   return messages.slice(-limit)
     .map((message) => `${message.type === "user" ? "使用者" : "助理"}：${message.content.filter((part) => part.type === "text").map((part) => part.text).join("")}`)
     .map((line) => line.slice(0, width))
@@ -204,10 +204,13 @@ export function startSuggestions(ctx, publish) {
             ...(command.slash.aliases ?? []).map((name) => ({ name, description: command.title }))] : [])
         const knownCommands = new Set([...commands, ...uiCommands].map((command) => command.name))
         const knownSkills = new Set(skills.map((skill) => skill.id))
-        const reply = await withTimeout(ctx.client.session.generate({
-          sessionID,
-          prompt: suggestionPrompt([...commands, ...uiCommands], skills, ctx.options.suggestSkills !== false),
-        }, { signal }), "模型生成")
+        const reply = await withTimeout((() => {
+          const instruction = suggestionPrompt([...commands, ...uiCommands], skills, ctx.options.suggestSkills !== false)
+          const model = suggestionModel(ctx.options)
+          if (!model) return ctx.client.session.generate({ sessionID, prompt: instruction }, { signal })
+          const transcript = conversation(ctx.data.session.message.list(sessionID))
+          return ctx.client.generate.text({ prompt: `對話紀錄：\n${transcript}\n\n${instruction}`, model }, { signal })
+        })(), "模型生成")
         if (!validOrSay()) return
         const items = parseSuggestions(reply.text, knownCommands, knownSkills)
         if (items.length) say(`產生 ${items.length} 則建議`, force)
