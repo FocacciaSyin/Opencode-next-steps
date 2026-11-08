@@ -5,8 +5,6 @@ import { draftEditor, startSuggestions, suggestionHint } from "./suggestions.js"
 
 type Offer = { sessionID: string; items: { label: string; prompt: string }[]; loading: boolean }
 
-const PANEL_NAME = "next-steps"
-
 export default Plugin.define({
   id: "next-steps",
   setup(ctx) {
@@ -62,9 +60,14 @@ export default Plugin.define({
           title: "Generate next-step suggestions",
           palette: true,
           enabled: () => ctx.ui.router.current().type === "session",
-          run: () => {
-            ctx.ui.panel.open(PANEL_NAME)
-            return suggestions.refresh() ? undefined : false
+          run: async () => {
+            const items = await suggestions.refresh()
+            if (!items?.length) return false
+            const picked = await ctx.ui.dialog.select({
+              title: "Next steps",
+              options: items.map((item, index) => ({ title: item.label, value: index, description: item.prompt })),
+            })
+            if (typeof picked === "number") suggestions.fill(picked)
           },
         },
       ],
@@ -100,32 +103,9 @@ export default Plugin.define({
         </box>}
       </Show>,
     })
-    const panelSlot = ctx.ui.slot({
-      append: "session.panel",
-      render: (panel) => (
-        <Show when={panel.name === PANEL_NAME}>
-          <Show when={offer()?.sessionID === panel.sessionID && offer()} fallback={
-            <text fg={ctx.theme.text.muted}>No suggestions yet — run Generate next-step suggestions from the palette.</text>
-          }>
-            {(current) => <box flexDirection="column" width="100%">
-              <Show when={current().loading}><text fg={ctx.theme.text.muted}>Generating next-step suggestions…</text></Show>
-              <For each={current().items}>{(item, index) =>
-                <box width="100%" height={1} flexShrink={0}>
-                  <text width="100%" wrapMode="none" truncate fg={ctx.theme.text.muted} onMouseDown={() => {
-                    if (!suggestions.fill(index())) ctx.ui.toast.show({ message: "Clear the main input and return to normal mode first", variant: "info" })
-                  }}>{`${index() + 1}: ${item.label}`}</text>
-                </box>
-              }</For>
-              <Show when={current().items.length}><text width="100%" fg={ctx.theme.text.muted}>{suggestionHint(current().items)}</text></Show>
-            </box>}
-          </Show>
-        </Show>
-      ),
-    })
     return () => {
       suggestions.stop()
       slot()
-      panelSlot()
       ctx.renderer.off(CliRenderEvents.FOCUSED_EDITOR, observe)
       observed?.off(EditBufferRenderableEvents.TRAITS_CHANGED, changed)
       observed?.editBuffer.off("content-changed", changed)

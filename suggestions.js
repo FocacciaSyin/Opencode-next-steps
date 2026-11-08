@@ -123,7 +123,7 @@ export function startSuggestions(ctx, publish) {
     timer.unref?.()
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
   }
-  // force 只略過最小字數門檻（手動觸發），其餘規則不變。
+  // 回傳本次產生的建議（無則 undefined），供手動觸發的 popup 使用。
   const request = (sessionID, force, location) => {
     hide()
     const mark = revision
@@ -144,7 +144,7 @@ export function startSuggestions(ctx, publish) {
       if (problems.length) say(`略過：${problems.join("，")}`)
       return problems.length === 0
     }
-    void (async () => {
+    return (async () => {
       try {
         await ctx.data.session.message.sync(sessionID)
         if (!validOrSay()) return
@@ -175,6 +175,7 @@ export function startSuggestions(ctx, publish) {
         const items = parseSuggestions(reply.text, knownCommands, knownSkills)
         if (!items.length) say(`生成回來 0 則：模型回傳 ${reply.text.trim().length} 字非預期 JSON`)
         show(items.length ? { sessionID, items, loading: false } : undefined)
+        return items
       } catch (error) {
         if (mark === revision) {
           show(undefined)
@@ -214,8 +215,7 @@ export function startSuggestions(ctx, publish) {
     refresh() {
       const route = ctx.ui.router.current()
       if (route.type !== "session") { say("略過：不在 session 畫面"); return false }
-      request(route.sessionID, true)
-      return true
+      return request(route.sessionID, true)
     },
     changed() {
       if (filling) return

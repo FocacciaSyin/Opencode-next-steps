@@ -359,15 +359,15 @@ test("only selected completed answers request suggestions", async () => {
   f.runtime.stop()
 })
 
-// 驗證手動觸發略過最小字數門檻，短回答也能產生建議。
+// 驗證手動觸發略過最小字數門檻，短回答也能產生建議並回傳給 popup。
 test("manual refresh generates without minimum answer length", async () => {
   const f = fixture()
   f.session.message.list = () => [{ type: "assistant", finish: "stop", content: [{ type: "text", text: "太短" }] }]
   f.emit("session.execution.succeeded")
   await f.flush()
   assert.equal(f.generated(), 0)
-  assert.equal(f.runtime.refresh(), true)
-  await f.flush()
+  const items = await f.runtime.refresh()
+  assert.equal(items.length, 1)
   assert.equal(f.generated(), 1)
   assert.equal(f.offer().items.length, 1)
   f.runtime.stop()
@@ -377,8 +377,7 @@ test("manual refresh generates without minimum answer length", async () => {
 test("manual refresh skips busy session without generating", async () => {
   const f = fixture()
   f.session.status = () => "busy"
-  assert.equal(f.runtime.refresh(), true)
-  await f.flush()
+  assert.equal(await f.runtime.refresh(), undefined)
   assert.equal(f.generated(), 0)
   assert.equal(f.offer(), undefined)
   f.runtime.stop()
@@ -389,8 +388,9 @@ test("manual refresh times out when sync hangs", async () => {
   const f = fixture()
   f.ctx.options.timeoutMs = 50
   f.ctx.data.location.command.sync = () => new Promise(() => {})
-  assert.equal(f.runtime.refresh(), true)
+  const pending = f.runtime.refresh()
   await new Promise((resolve) => setTimeout(resolve, 300))
+  assert.equal(await pending, undefined)
   assert.equal(f.generated(), 0)
   assert.equal(f.offer(), undefined)
   f.runtime.stop()
