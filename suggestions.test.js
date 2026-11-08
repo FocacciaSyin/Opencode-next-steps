@@ -416,6 +416,21 @@ test("idle event triggers one generation and does not repeat", async () => {
   f.runtime.stop()
 })
 
+// 驗證 20 字以上會觸發建議、低於門檻則略過。
+test("minimum answer length boundary at 20 characters", async () => {
+  const f = fixture()
+  f.session.message.list = () => [{ type: "assistant", finish: "stop", content: [{ type: "text", text: "a".repeat(19) }] }]
+  f.emit("session.execution.succeeded")
+  await f.flush()
+  assert.equal(f.generated(), 0)
+  f.session.message.list = () => [{ type: "assistant", finish: "stop", content: [{ type: "text", text: "a".repeat(20) }] }]
+  f.emit("session.execution.succeeded")
+  await f.flush()
+  assert.equal(f.generated(), 1)
+  assert.equal(f.offer().items.length, 1)
+  f.runtime.stop()
+})
+
 // 驗證 debug 關閉時不跳診斷提示，開啟時才跳。
 test("debug option gates diagnostic toasts", async () => {
   const toast = (options) => {

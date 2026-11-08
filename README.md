@@ -90,7 +90,7 @@ OpenCode 會監看設定變更；必要時在 TUI 執行 `/reload`。
 }
 ```
 
-`minAnswerChars` 是觸發建議的最小回答字元數；`suggestSkills: false` 不將可用指令與 skills 清單提供給建議模型。上述兩種設定擇一，不要同時加入同一路徑。
+`minAnswerChars` 是觸發建議的最小回答字元數，預設 20；`suggestSkills: false` 不將可用指令與 skills 清單提供給建議模型。上述兩種設定擇一，不要同時加入同一路徑。
 
 ## 開發與驗證
 

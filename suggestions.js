@@ -151,7 +151,7 @@ export function startSuggestions(ctx, publish) {
         const assistant = ctx.data.session.message.list(sessionID).findLast((message) => message.type === "assistant")
         if (!assistant || assistant.finish !== "stop" || assistant.error) { say(`略過：finish=${assistant?.finish} error=${assistant?.error ? "yes" : "no"}`, force); return }
         const answer = assistant.content.filter((part) => part.type === "text").map((part) => part.text).join("")
-        const minimum = typeof ctx.options.minAnswerChars === "number" ? Math.max(0, ctx.options.minAnswerChars) : 80
+        const minimum = typeof ctx.options.minAnswerChars === "number" ? Math.max(0, ctx.options.minAnswerChars) : 20
         if (!force && answer.trim().length < minimum) { say(`略過：回答 ${answer.trim().length} 字 < ${minimum}`, force); return }
         const problems = draftDebug(ctx, sessionID)
         if (problems.length) { say(`略過：輸入框 ${problems.join("，")}`, force); return }
