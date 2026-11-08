@@ -60,15 +60,7 @@ export default Plugin.define({
           title: "Generate next-step suggestions",
           palette: true,
           enabled: () => ctx.ui.router.current().type === "session",
-          run: async () => {
-            const items = await suggestions.refresh()
-            if (!items?.length) return false
-            const picked = await ctx.ui.dialog.select({
-              title: "Next steps",
-              options: items.map((item, index) => ({ title: item.label, value: index, description: item.prompt })),
-            })
-            if (typeof picked === "number") suggestions.fill(picked)
-          },
+          run: () => { suggestions.refresh() },
         },
       ],
     }))
