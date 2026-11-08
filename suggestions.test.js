@@ -372,3 +372,14 @@ test("manual refresh generates without minimum answer length", async () => {
   assert.equal(f.offer().items.length, 1)
   f.runtime.stop()
 })
+
+// 驗證 session 忙碌時手動觸發也不生成。
+test("manual refresh skips busy session without generating", async () => {
+  const f = fixture()
+  f.session.status = () => "busy"
+  assert.equal(f.runtime.refresh(), true)
+  await f.flush()
+  assert.equal(f.generated(), 0)
+  assert.equal(f.offer(), undefined)
+  f.runtime.stop()
+})

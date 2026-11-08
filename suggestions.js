@@ -122,12 +122,24 @@ export function startSuggestions(ctx, publish) {
     pendingSession = sessionID
     controller = new AbortController()
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30_000)])
-    const valid = () => mark === revision && !signal.aborted && active(sessionID)
-      && ctx.data.session.status(sessionID) === "idle" && !ctx.data.session.pending.list(sessionID).length
+    const validProblems = () => {
+      const problems = []
+      if (mark !== revision) problems.push("stale")
+      if (signal.aborted) problems.push("aborted")
+      if (!active(sessionID)) problems.push("inactive")
+      if (ctx.data.session.status(sessionID) !== "idle") problems.push(`status=${ctx.data.session.status(sessionID)}`)
+      if (ctx.data.session.pending.list(sessionID).length) problems.push("pending")
+      return problems
+    }
+    const validOrSay = () => {
+      const problems = validProblems()
+      if (problems.length) say(`略過：${problems.join("，")}`)
+      return problems.length === 0
+    }
     void (async () => {
       try {
         await ctx.data.session.message.sync(sessionID)
-        if (!valid()) return
+        if (!validOrSay()) return
         const assistant = ctx.data.session.message.list(sessionID).findLast((message) => message.type === "assistant")
         if (!assistant || assistant.finish !== "stop" || assistant.error) { say(`略過：finish=${assistant?.finish} error=${assistant?.error ? "yes" : "no"}`); return }
         const answer = assistant.content.filter((part) => part.type === "text").map((part) => part.text).join("")
@@ -139,7 +151,7 @@ export function startSuggestions(ctx, publish) {
         show({ sessionID, items: [], loading: true })
         const target = location ?? ctx.data.session.get(sessionID)?.location ?? ctx.location ?? ctx.data.location.default()
         await Promise.all([ctx.data.location.command.sync(target), ctx.data.location.skill.sync(target)])
-        if (!valid()) return
+        if (!validOrSay()) return
         const commands = ctx.data.location.command.list(target) ?? []
         const skills = ctx.data.location.skill.list(target) ?? []
         const uiCommands = ctx.keymap.commands().flatMap((command) => command.slash
@@ -151,7 +163,7 @@ export function startSuggestions(ctx, publish) {
           sessionID,
           prompt: suggestionPrompt([...commands, ...uiCommands], skills, ctx.options.suggestSkills !== false),
         }, { signal })
-        if (!valid()) return
+        if (!validOrSay()) return
         const items = parseSuggestions(reply.text, knownCommands, knownSkills)
         if (!items.length) say(`生成回來 0 則：模型回傳 ${reply.text.trim().length} 字非預期 JSON`)
         show(items.length ? { sessionID, items, loading: false } : undefined)

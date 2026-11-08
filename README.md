@@ -13,6 +13,7 @@ OpenCode V2 的 TUI 與 Desktop 外掛：在目前對話完成後，優先產生
 - 輸入框空白時按 `0`：關閉建議。
 - 自行修改草稿後，停止替換；清空草稿後可重新選取。
 - 沒自動出現時，可開命令面板執行「Generate next-step suggestions」手動觸發（只略過最小字數門檻，其餘規則不變）。
+- 手動觸發會另開獨立面板（session panel，參考 openspec-board 做法），顯示產生進度與三則建議，點選填入草稿；自動生成仍只顯示在輸入框上方，不彈面板。
 
 ### 桌面版 GUI（OpenCode Desktop 2.2.0）
 
