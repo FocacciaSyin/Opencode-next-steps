@@ -107,6 +107,8 @@ test("completion generates editable draft without submitting", async () => {
     assert.match(input.prompt, /不是必須依序執行的三個步驟/)
     assert.match(input.prompt, /不要固定套用這些分類/)
     assert.match(input.prompt, /至少一則要用於深入理解/)
+    assert.match(input.prompt, /推進工作×2＋反問理解×1/)
+    assert.match(input.prompt, /推進工作×1＋風險／替代方案×1＋反問理解×1/)
     assert.match(input.prompt, /以反問或追問釐清目標、假設、限制或成因/)
     assert.match(input.prompt, /標籤直接點出各自的面向與具體內容/)
     assert.match(input.prompt, /不足三個有用面向時才減少則數/)
