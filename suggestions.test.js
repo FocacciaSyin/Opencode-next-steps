@@ -30,9 +30,9 @@ test("safe suggestions keep only known commands and skills", () => {
 test("suggestion hints match available choices", () => {
   const items = [{ prompt: "第一則" }, { prompt: "第二則" }, { prompt: "第三則" }]
   const cases = [
-    [1, "Tab 填入 · 點擊填入 · 空白時 1 選取、0 關閉（僅填入草稿）"],
-    [2, "Tab 輪流切換 · 點擊填入 · 空白時 1／2 選取、0 關閉（僅填入草稿）"],
-    [3, "Tab 輪流切換 · 點擊填入 · 空白時 1／2／3 選取、0 關閉（僅填入草稿）"],
+    [1, "Tab fill · click to fill · 1 to select, 0 to dismiss (draft only)"],
+    [2, "Tab cycle · click to fill · 1/2 to select, 0 to dismiss (draft only)"],
+    [3, "Tab cycle · click to fill · 1/2/3 to select, 0 to dismiss (draft only)"],
   ]
   for (const [count, expected] of cases) {
     assert.equal(suggestionHint(items.slice(0, count)), expected)
@@ -356,5 +356,19 @@ test("only selected completed answers request suggestions", async () => {
     assert.equal(f.generated(), 0)
     assert.equal(f.offer(), undefined)
   }
+  f.runtime.stop()
+})
+
+// 驗證手動觸發略過最小字數門檻，短回答也能產生建議。
+test("manual refresh generates without minimum answer length", async () => {
+  const f = fixture()
+  f.session.message.list = () => [{ type: "assistant", finish: "stop", content: [{ type: "text", text: "太短" }] }]
+  f.emit("session.execution.succeeded")
+  await f.flush()
+  assert.equal(f.generated(), 0)
+  assert.equal(f.runtime.refresh(), true)
+  await f.flush()
+  assert.equal(f.generated(), 1)
+  assert.equal(f.offer().items.length, 1)
   f.runtime.stop()
 })

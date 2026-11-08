@@ -8,6 +8,7 @@ type Offer = { sessionID: string; items: { label: string; prompt: string }[]; lo
 export default Plugin.define({
   id: "next-steps",
   setup(ctx) {
+    if (ctx.options.debug) ctx.ui.toast.show({ message: "[next-steps] TUI 已載入（debug 開啟）", variant: "info" })
     const [offer, setOffer] = createSignal<Offer>()
     const [focusVersion, setFocusVersion] = createSignal(0)
     const suggestions = startSuggestions(ctx, setOffer)
@@ -52,28 +53,41 @@ export default Plugin.define({
     })
     ctx.keymap.layer(() => ({
       priority: 100,
+      mode: "global",
+      commands: [
+        {
+          id: "next-steps.refresh",
+          title: "Generate next-step suggestions",
+          palette: true,
+          enabled: () => ctx.ui.router.current().type === "session",
+          run: () => suggestions.refresh() ? undefined : false,
+        },
+      ],
+    }))
+    ctx.keymap.layer(() => ({
+      priority: 100,
       enabled: () => !!visible()?.items.length && !!suggestions.editor(),
       commands: [
         ...[1, 2, 3].map((number) => ({
           id: `next-steps.${number}`,
-          title: `填入下一步 ${number}`,
+          title: `Fill next step ${number}`,
           bind: String(number),
           enabled: () => !!offer()?.items[number - 1] && !!draftEditor(ctx, offer()!.sessionID),
           run: () => suggestions.fill(number - 1) ? undefined : false as const,
         })),
-        { id: "next-steps.accept", title: "輪流填入下一步", bind: "tab", run: () => suggestions.cycle() ? undefined : false },
-        { id: "next-steps.dismiss", title: "關閉下一步建議", bind: "0", enabled: () => !!offer() && !!draftEditor(ctx, offer()!.sessionID), run: suggestions.hide },
+        { id: "next-steps.accept", title: "Cycle next-step suggestion", bind: "tab", run: () => suggestions.cycle() ? undefined : false },
+        { id: "next-steps.dismiss", title: "Dismiss next-step suggestions", bind: "0", enabled: () => !!offer() && !!draftEditor(ctx, offer()!.sessionID), run: suggestions.hide },
       ],
     }))
     const slot = ctx.ui.slot({
       append: "session.composer.top",
       render: (props) => <Show when={visible()?.sessionID === props.sessionID && visible()}>
         {(current) => <box flexDirection="column" width="100%" flexShrink={0} marginTop={1}>
-          <Show when={current().loading}><text fg={ctx.theme.text.muted}>下一步建議產生中…</text></Show>
+          <Show when={current().loading}><text fg={ctx.theme.text.muted}>Generating next-step suggestions…</text></Show>
           <For each={current().items}>{(item, index) =>
             <box width="100%" height={1} flexShrink={0}>
               <text width="100%" wrapMode="none" truncate fg={ctx.theme.text.muted} onMouseDown={() => {
-                if (!suggestions.fill(index())) ctx.ui.toast.show({ message: "請先將主輸入框清空並切回一般輸入模式", variant: "info" })
+                if (!suggestions.fill(index())) ctx.ui.toast.show({ message: "Clear the main input and return to normal mode first", variant: "info" })
               }}>{`${index() + 1}: ${item.label}`}</text>
             </box>
           }</For>
