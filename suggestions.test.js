@@ -395,3 +395,16 @@ test("manual refresh times out when sync hangs", async () => {
   assert.equal(f.offer(), undefined)
   f.runtime.stop()
 })
+
+// 驗證 idle 事件也能自動觸發，且已有建議時不重複生成。
+test("idle event triggers one generation and does not repeat", async () => {
+  const f = fixture()
+  f.emit("session.idle")
+  await f.flush()
+  assert.equal(f.generated(), 1)
+  assert.equal(f.offer().items.length, 1)
+  f.emit("session.idle")
+  await f.flush()
+  assert.equal(f.generated(), 1)
+  f.runtime.stop()
+})

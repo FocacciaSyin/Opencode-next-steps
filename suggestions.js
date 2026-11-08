@@ -199,6 +199,15 @@ export function startSuggestions(ctx, publish) {
     lastEvent = event.id
     request(sessionID, false, event.location)
   })
+  // 部分情況下 succeeded 不會送到 TUI，改用 idle 補觸發；已有建議或生成中則跳過。
+  const idle = ctx.data.on("session.idle", (event) => {
+    const sessionID = event.data.sessionID
+    if (pendingSession === sessionID) return
+    if (offer?.sessionID === sessionID && offer.items.length) return
+    if (!active(sessionID)) return
+    if (ctx.data.session.status(sessionID) !== "idle") return
+    request(sessionID, false, event.location)
+  })
   return {
     hide,
     editor,
@@ -235,6 +244,7 @@ export function startSuggestions(ctx, publish) {
     stop() {
       started()
       succeeded()
+      idle()
       hide()
     },
   }
