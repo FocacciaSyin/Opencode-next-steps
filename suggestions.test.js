@@ -408,3 +408,24 @@ test("idle event triggers one generation and does not repeat", async () => {
   assert.equal(f.generated(), 1)
   f.runtime.stop()
 })
+
+// 驗證 debug 關閉時不跳診斷提示，開啟時才跳。
+test("debug option gates diagnostic toasts", async () => {
+  const toast = (options) => {
+    const f = fixture()
+    f.ctx.options = options
+    const messages = []
+    f.ctx.ui.toast = { show: (input) => messages.push(input.message) }
+    f.session.message.list = () => [{ type: "assistant", finish: "stop", content: [{ type: "text", text: "短" }] }]
+    f.emit("session.execution.succeeded")
+    return { f, messages }
+  }
+  const quiet = toast({})
+  await quiet.f.flush()
+  assert.deepEqual(quiet.messages, [])
+  quiet.f.runtime.stop()
+  const loud = toast({ debug: true })
+  await loud.f.flush()
+  assert.equal(loud.messages.length > 0, true)
+  loud.f.runtime.stop()
+})
