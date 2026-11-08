@@ -92,8 +92,8 @@ export function startSuggestions(ctx, publish) {
   let lastEvent
   let filled
   let filling = false
-  // shortcut: 只在 options.debug 時提示略過原因，平時保持安靜。
-  const say = (message) => { if (ctx.options.debug) ctx.ui.toast.show({ message: `[next-steps] ${message}`, variant: "info" }) }
+  // shortcut: 手動觸發（force）或 options.debug 才提示略過原因，自動流程保持安靜。
+  const say = (message, always) => { if (always || ctx.options.debug) ctx.ui.toast?.show({ message: `[next-steps] ${message}`, variant: "info" }) }
   const editor = () => {
     if (!offer) return
     const current = draftEditor(ctx, offer.sessionID, filled?.prompt ?? "")
@@ -141,7 +141,7 @@ export function startSuggestions(ctx, publish) {
     }
     const validOrSay = () => {
       const problems = validProblems()
-      if (problems.length) say(`略過：${problems.join("，")}`)
+      if (problems.length) say(`略過：${problems.join("，")}`, force)
       return problems.length === 0
     }
     return (async () => {
@@ -149,12 +149,12 @@ export function startSuggestions(ctx, publish) {
         await ctx.data.session.message.sync(sessionID)
         if (!validOrSay()) return
         const assistant = ctx.data.session.message.list(sessionID).findLast((message) => message.type === "assistant")
-        if (!assistant || assistant.finish !== "stop" || assistant.error) { say(`略過：finish=${assistant?.finish} error=${assistant?.error ? "yes" : "no"}`); return }
+        if (!assistant || assistant.finish !== "stop" || assistant.error) { say(`略過：finish=${assistant?.finish} error=${assistant?.error ? "yes" : "no"}`, force); return }
         const answer = assistant.content.filter((part) => part.type === "text").map((part) => part.text).join("")
         const minimum = typeof ctx.options.minAnswerChars === "number" ? Math.max(0, ctx.options.minAnswerChars) : 80
-        if (!force && answer.trim().length < minimum) { say(`略過：回答 ${answer.trim().length} 字 < ${minimum}`); return }
+        if (!force && answer.trim().length < minimum) { say(`略過：回答 ${answer.trim().length} 字 < ${minimum}`, force); return }
         const problems = draftDebug(ctx, sessionID)
-        if (problems.length) { say(`略過：輸入框 ${problems.join("，")}`); return }
+        if (problems.length) { say(`略過：輸入框 ${problems.join("，")}`, force); return }
         if (!draftEditor(ctx, sessionID)) return
         show({ sessionID, items: [], loading: true })
         const target = location ?? ctx.data.session.get(sessionID)?.location ?? ctx.location ?? ctx.data.location.default()
@@ -173,14 +173,14 @@ export function startSuggestions(ctx, publish) {
         }, { signal }), "模型生成")
         if (!validOrSay()) return
         const items = parseSuggestions(reply.text, knownCommands, knownSkills)
-        if (items.length) say(`產生 ${items.length} 則建議`)
-        else say(`生成回來 0 則：模型回傳 ${reply.text.trim().length} 字非預期 JSON`)
+        if (items.length) say(`產生 ${items.length} 則建議`, force)
+        else say(`生成回來 0 則：模型回傳 ${reply.text.trim().length} 字非預期 JSON`, true)
         show(items.length ? { sessionID, items, loading: false } : undefined)
         return items
       } catch (error) {
         if (mark === revision) {
           show(undefined)
-          say(`生成失敗：${error instanceof Error ? error.message : String(error)}`)
+          say(`生成失敗：${error instanceof Error ? error.message : String(error)}`, true)
           if (!signal.aborted) console.error("[next-steps] 無法產生建議：", error instanceof Error ? error.message : String(error))
         }
       } finally {

@@ -68,7 +68,7 @@ function fixture(generate = async () => ({ text: '[{"label":"測試","prompt":"�
   }
   const ctx = {
     options: {},
-    ui: { router: { current: () => ({ type: "session", sessionID: "selected" }) } },
+    ui: { router: { current: () => ({ type: "session", sessionID: "selected" }) }, toast: { show: () => {} } },
     renderer: { currentFocusedEditor: editor },
     keymap: { mode: { current: () => "base" }, commands: () => [] },
     data: {
@@ -377,13 +377,16 @@ test("manual refresh generates without minimum answer length", async () => {
   f.runtime.stop()
 })
 
-// 驗證 session 忙碌時手動觸發也不生成。
+// 驗證 session 忙碌時手動觸發也不生成，但會說明原因。
 test("manual refresh skips busy session without generating", async () => {
   const f = fixture()
   f.session.status = () => "busy"
+  const messages = []
+  f.ctx.ui.toast = { show: (input) => messages.push(input.message) }
   assert.equal(await f.runtime.refresh(), undefined)
   assert.equal(f.generated(), 0)
   assert.equal(f.offer(), undefined)
+  assert.equal(messages.length, 1)
   f.runtime.stop()
 })
 
