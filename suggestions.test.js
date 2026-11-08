@@ -383,3 +383,15 @@ test("manual refresh skips busy session without generating", async () => {
   assert.equal(f.offer(), undefined)
   f.runtime.stop()
 })
+
+// 驗證同步卡住時手動觸發會逾時失敗，不會無聲卡死。
+test("manual refresh times out when sync hangs", async () => {
+  const f = fixture()
+  f.ctx.options.timeoutMs = 50
+  f.ctx.data.location.command.sync = () => new Promise(() => {})
+  assert.equal(f.runtime.refresh(), true)
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  assert.equal(f.generated(), 0)
+  assert.equal(f.offer(), undefined)
+  f.runtime.stop()
+})

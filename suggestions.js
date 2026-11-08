@@ -115,6 +115,14 @@ export function startSuggestions(ctx, publish) {
     filled = undefined
     show(undefined)
   }
+  // shortcut: 同步與生成都可能無聲卡住，加逾時快速失敗並回報階段。
+  const withTimeout = (promise, label) => {
+    const timeoutMs = typeof ctx.options.timeoutMs === "number" && ctx.options.timeoutMs > 0 ? ctx.options.timeoutMs : 30_000
+    let timer
+    const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${label}逾時`)), timeoutMs) })
+    timer.unref?.()
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+  }
   // force 只略過最小字數門檻（手動觸發），其餘規則不變。
   const request = (sessionID, force, location) => {
     hide()
@@ -150,7 +158,7 @@ export function startSuggestions(ctx, publish) {
         if (!draftEditor(ctx, sessionID)) return
         show({ sessionID, items: [], loading: true })
         const target = location ?? ctx.data.session.get(sessionID)?.location ?? ctx.location ?? ctx.data.location.default()
-        await Promise.all([ctx.data.location.command.sync(target), ctx.data.location.skill.sync(target)])
+        await withTimeout(Promise.all([ctx.data.location.command.sync(target), ctx.data.location.skill.sync(target)]), "同步指令/skills")
         if (!validOrSay()) return
         const commands = ctx.data.location.command.list(target) ?? []
         const skills = ctx.data.location.skill.list(target) ?? []
@@ -159,10 +167,10 @@ export function startSuggestions(ctx, publish) {
             ...(command.slash.aliases ?? []).map((name) => ({ name, description: command.title }))] : [])
         const knownCommands = new Set([...commands, ...uiCommands].map((command) => command.name))
         const knownSkills = new Set(skills.map((skill) => skill.id))
-        const reply = await ctx.client.session.generate({
+        const reply = await withTimeout(ctx.client.session.generate({
           sessionID,
           prompt: suggestionPrompt([...commands, ...uiCommands], skills, ctx.options.suggestSkills !== false),
-        }, { signal })
+        }, { signal }), "模型生成")
         if (!validOrSay()) return
         const items = parseSuggestions(reply.text, knownCommands, knownSkills)
         if (!items.length) say(`生成回來 0 則：模型回傳 ${reply.text.trim().length} 字非預期 JSON`)
