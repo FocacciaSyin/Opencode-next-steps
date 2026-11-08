@@ -81,7 +81,7 @@ export function suggestionModel(options) {
 
 export function conversation(messages, limit = 4, width = 1000, total = 3000) {
   return messages.slice(-limit)
-    .map((message) => `${message.type === "user" ? "使用者" : "助理"}：${message.content.filter((part) => part.type === "text").map((part) => part.text).join("")}`)
+    .map((message) => `${message.type === "user" ? "使用者" : "助理"}：${(message.content ?? []).filter((part) => part?.type === "text").map((part) => part.text ?? "").join("")}`)
     .map((line) => line.slice(0, width))
     .join("\n")
     .slice(-total)

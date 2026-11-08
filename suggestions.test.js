@@ -43,6 +43,7 @@ test("fixed cheap model receives trimmed transcript", async () => {
   assert.equal(f.textInput().prompt.includes("問題".repeat(800)), false)
   assert.equal(conversation([]), "")
   assert.equal(conversation([{ type: "user", content: [{ type: "text", text: "x".repeat(5000) }] }]).length <= 3000, true)
+  assert.equal(conversation([{ type: "assistant" }, { type: "user", content: [{ type: "tool" }] }]), "助理：\n使用者：")
   f.runtime.stop()
 })
 
