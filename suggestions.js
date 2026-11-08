@@ -173,7 +173,8 @@ export function startSuggestions(ctx, publish) {
         }, { signal }), "模型生成")
         if (!validOrSay()) return
         const items = parseSuggestions(reply.text, knownCommands, knownSkills)
-        if (!items.length) say(`生成回來 0 則：模型回傳 ${reply.text.trim().length} 字非預期 JSON`)
+        if (items.length) say(`產生 ${items.length} 則建議`)
+        else say(`生成回來 0 則：模型回傳 ${reply.text.trim().length} 字非預期 JSON`)
         show(items.length ? { sessionID, items, loading: false } : undefined)
         return items
       } catch (error) {
