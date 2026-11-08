@@ -26,6 +26,17 @@ test("safe suggestions keep only known commands and skills", () => {
   assert.equal(clean("\u3164\u200b", 48), "")
 })
 
+// 驗證模型夾帶說明、markdown 圍欄或尾逗號時仍能解析出建議。
+test("parse tolerates prose, fences and trailing commas", () => {
+  const reply = [
+    "以下是建議（見 [1]）：",
+    "```json",
+    '[{"label":"推進","prompt":"執行測試"},{"label":"理解","prompt":"為何會逾時？",},]',
+    "```",
+  ].join("\n")
+  assert.deepEqual(parseSuggestions(reply, new Set()).map((item) => item.prompt), ["執行測試", "為何會逾時？"])
+})
+
 // 驗證一至三則建議的提示只列出有效數字鍵，並區分 Tab 填入與輪流切換。
 test("suggestion hints match available choices", () => {
   const items = [{ prompt: "第一則" }, { prompt: "第二則" }, { prompt: "第三則" }]
